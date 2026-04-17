@@ -3,6 +3,8 @@
 
 > **Personal Project Notice**: This is a personal, non-commercial project created for learning and experimenting with algorithmic trading strategies. It is not intended for production or commercial use.
 
+> **Project Status**: This project is no longer actively developed. The last changes were made on **July 10, 2025**. The repository is kept public for reference and learning purposes only.
+
 ## Overview
 This project is a modular component of a larger trading bot system, designed for collecting and preprocessing historical market data from the Binance exchange to support backtesting of trading strategies. The module retrieves candlestick data, calculates metrics such as Z-scores and stationarity (via the Augmented Dickey-Fuller test), generates synthetic trading pairs, and stores the processed data in a PostgreSQL database. The data is then serialized into JSON and sent via HTTP to another component of the trading bot for further analysis, signal generation, and simulated trades.
 This module is exclusively for **historical market simulation** (backtesting), not live trading. It enables strategy testing by replaying past market conditions without financial risk. Data is processed day-by-day (up to 270 days by default) and supports both regular and synthetic pairs (e.g., BTCUSDT/ETHUSDT).
@@ -38,6 +40,8 @@ The project was intentionally built in Rust with the long-term goal of **impleme
 - Correctness is prioritized over performance during this phase.
 
 Once the native Rust implementation of the ADF test is fully validated, the PyO3 bridge will be removed, which is expected to significantly improve throughput — especially when processing large numbers of pairs.
+
+> **Note**: Since the project is no longer actively developed, this migration may never be completed. The Python bridge remains the current solution.
 
 ## Prerequisites
 - **Rust**: Version 1.70 or higher. Install via [rustup](https://rustup.rs/).
@@ -130,11 +134,11 @@ Tests cover serialization, data trimming, pair addition, and time/date logic usi
 ## Limitations and Notes
 - **Historical Only**: Designed for backtesting; does not support live data streaming.
 - **API Rate Limits**: Adheres to Binance API limits using chunked requests to avoid bans.
-- **Python Dependency**: The ADF stationarity test currently relies on Python via PyO3; a native Rust implementation is planned.
+- **Python Dependency**: The ADF stationarity test currently relies on Python via PyO3; a native Rust implementation was planned but not completed.
 - **Dependencies**: Relies on crates like `sqlx`, `binance-async`, `pyo3`, `ndarray`, and `tracing`.
 - **Error Handling**: Uses `anyhow` for robust error management; logs errors via `tracing`.
 - **Security**: Store API keys securely and avoid committing `.env` files.
 - **Scalability**: Handles large numbers of pairs; optimize database connections for your hardware.
 
 ## Contributing
-Contributions are welcome! Please open an issue or pull request for bugs, features, or improvements.
+Since this project is no longer actively maintained, pull requests and issues may not be reviewed or addressed. Feel free to fork the repository and adapt it for your own purposes.
