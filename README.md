@@ -1,11 +1,10 @@
 # Binance Data Collector
-
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 
+> **Personal Project Notice**: This is a personal, non-commercial project created for learning and experimenting with algorithmic trading strategies. It is not intended for production or commercial use.
+
 ## Overview
-
 This project is a modular component of a larger trading bot system, designed for collecting and preprocessing historical market data from the Binance exchange to support backtesting of trading strategies. The module retrieves candlestick data, calculates metrics such as Z-scores and stationarity (via the Augmented Dickey-Fuller test), generates synthetic trading pairs, and stores the processed data in a PostgreSQL database. The data is then serialized into JSON and sent via HTTP to another component of the trading bot for further analysis, signal generation, and simulated trades.
-
 This module is exclusively for **historical market simulation** (backtesting), not live trading. It enables strategy testing by replaying past market conditions without financial risk. Data is processed day-by-day (up to 270 days by default) and supports both regular and synthetic pairs (e.g., BTCUSDT/ETHUSDT).
 
 ### Key Features
@@ -20,36 +19,58 @@ This module is exclusively for **historical market simulation** (backtesting), n
 
 This module is ideal for developing and validating trading strategies before deploying them in a live environment.
 
-## Prerequisites
+## Architecture & Performance Notes
 
+### Dickey-Fuller Calculation (Python Bridge)
+Currently, the most computationally expensive operation — the **Augmented Dickey-Fuller (ADF) stationarity test** — is executed by calling Python code from Rust using [PyO3](https://pyo3.rs/). This means the Rust runtime invokes a Python interpreter under the hood, which leverages the `statsmodels` library to perform the calculation.
+
+```
+Rust runtime
+    └── PyO3 bridge
+            └── Python (statsmodels.tsa.stattools.adfuller)
+```
+
+### Planned Migration to Pure Rust
+The project was intentionally built in Rust with the long-term goal of **implementing all mathematical calculations natively in Rust** to maximize performance and eliminate the Python dependency. The ADF test has not yet been migrated to pure Rust because:
+
+- The statistical implementation requires thorough validation against known-good results.
+- Not all edge cases and test scenarios have been covered yet.
+- Correctness is prioritized over performance during this phase.
+
+Once the native Rust implementation of the ADF test is fully validated, the PyO3 bridge will be removed, which is expected to significantly improve throughput — especially when processing large numbers of pairs.
+
+## Prerequisites
 - **Rust**: Version 1.70 or higher. Install via [rustup](https://rustup.rs/).
 - **PostgreSQL**: Version 13 or higher. Ensure a database is set up and accessible.
 - **Binance API Keys**: An API key and secret from Binance (Futures API access required). Read-only access is sufficient for historical data.
+- **Python**: Required for the ADF stationarity test via PyO3. Ensure `statsmodels` is installed (`pip install statsmodels`).
 - **Environment Variables**: Create a `.env` file in the project root.
 
 ## Installation
-
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/m18n/binance_collector_test.git
-   cd binance_collector_test
-   ```
+```bash
+git clone https://github.com/m18n/binance_collector_test.git
+cd binance_collector_test
+```
 
 2. Install dependencies:
-   ```bash
-   cargo build
-   ```
+```bash
+cargo build
+```
 
-3. Set up the database:
-   - Create a PostgreSQL database (e.g., `binance_collector`).
-   - Update the `.env` file with your database URL.
+3. Install Python dependencies:
+```bash
+pip install statsmodels
+```
 
-4. Run migrations (automatically handled on startup, verifiable with `cargo run`).
+4. Set up the database:
+- Create a PostgreSQL database (e.g., `binance_collector`).
+- Update the `.env` file with your database URL.
+
+5. Run migrations (automatically handled on startup, verifiable with `cargo run`).
 
 ## Configuration
-
 Create a `.env` file in the project root with the following variables:
-
 ```env
 DATABASE_URL=postgres://username:password@localhost/binance_collector
 API_KEY=your_binance_api_key
@@ -64,7 +85,6 @@ URL=http://localhost:3000/upload  # Endpoint for sending data to the analyzer
 Trading strategies (e.g., H4 candle limits, stationarity thresholds) are stored in the database and can be managed via SQL inserts into the `configuration` table.
 
 ## Usage
-
 Run the collector:
 ```bash
 cargo run
@@ -79,7 +99,7 @@ The program:
 ### Workflow
 1. **Initialization**: Connects to PostgreSQL and Binance API.
 2. **Data Fetching**: Retrieves historical candlesticks for regular and requested pairs.
-3. **Processing**: Computes Z-scores and stationarity metrics.
+3. **Processing**: Computes Z-scores and stationarity metrics (ADF test via Python bridge).
 4. **Synthetic Pairs**: Generates pairs (e.g., `BTCUSDT/ETHUSDT`) and processes them.
 5. **Storage**: Saves data to database tables (`pairs`, `stationarity_pairs`, `pairs_info`).
 6. **Export**: Serializes data into JSON and sends it in batches via HTTP.
@@ -88,7 +108,6 @@ The program:
 To simulate a specific historical date, modify the `base_date` in the code or database.
 
 ## Project Structure
-
 - `main.rs`: Entry point; initializes logging and starts the collector loop.
 - `migrations.rs`: Defines database schema migrations (e.g., tables for pairs, logs, configurations).
 - `binance_collector.rs`: Core logic for data collection, processing, and HTTP export.
@@ -102,25 +121,20 @@ To simulate a specific historical date, modify the `base_date` in the code or da
 - Unit tests using `mockall` for database and exchange interfaces.
 
 ## Testing
-
 Run tests:
 ```bash
 cargo test
 ```
-
 Tests cover serialization, data trimming, pair addition, and time/date logic using mocked interfaces.
 
 ## Limitations and Notes
-
 - **Historical Only**: Designed for backtesting; does not support live data streaming.
 - **API Rate Limits**: Adheres to Binance API limits using chunked requests to avoid bans.
+- **Python Dependency**: The ADF stationarity test currently relies on Python via PyO3; a native Rust implementation is planned.
 - **Dependencies**: Relies on crates like `sqlx`, `binance-async`, `pyo3`, `ndarray`, and `tracing`.
 - **Error Handling**: Uses `anyhow` for robust error management; logs errors via `tracing`.
 - **Security**: Store API keys securely and avoid committing `.env` files.
 - **Scalability**: Handles large numbers of pairs; optimize database connections for your hardware.
 
 ## Contributing
-
 Contributions are welcome! Please open an issue or pull request for bugs, features, or improvements.
-
-
